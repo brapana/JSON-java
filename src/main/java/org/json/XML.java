@@ -24,12 +24,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 
 
 /**
@@ -656,6 +660,234 @@ public class XML {
             }
         }
         return jo;
+    }
+
+    // Milestone 2: My own implementation of parse() in order to stop searching for object once found
+    // If the path is found, stops running once the path's innermost keys are closed
+    // Returns a JSONObject holding the contents of the given key path, with a key representing the key path's innermost key
+    // Returns an empty JSONObject if the keypath is not found, throws JSONException if the xml is malformed
+    // Returns a JSONObject containing the entire xml contents if the path is empty
+    // Malformed XML returns empty objects
+    public static JSONObject toJSONObject(Reader reader, JSONPointer path) throws JSONException {
+
+        JSONObject jo;
+        XMLTokener x = new XMLTokener(reader);
+
+        // String containing the current XMLTokener's "content"
+        String content;
+
+
+        // holds the contents of the current path (each string being a tag)
+        ArrayList<String> currentPath = new ArrayList<>();
+
+        // List containing each path key
+        ArrayList<String> pathList = new ArrayList<>();
+        pathList.addAll(Arrays.asList(path.toString().split("/")));
+
+
+        // if the path is empty, return the entire file as a jsonObject
+        if (pathList.size() == 0){
+            return toJSONObject(reader);
+        }
+
+        // remove the empty key left over from splitting the string
+        pathList.remove(0);
+
+        // XML as string built containing all the XML elements seen so far
+        StringBuilder outputXMLString = new StringBuilder();
+
+
+        // have we found the specified path?
+        boolean foundCorrectPath = false;
+
+        while (x.more()) {
+            content = x.nextContent().toString();
+
+            // ignore xml content tags
+            if (content.startsWith("?") || content.startsWith("!")){
+                // if we see one of these ignored symbols and the last content was an opening tag, remove it
+                if (outputXMLString.length() > 0 && outputXMLString.substring(outputXMLString.length()-1).equals("<")){
+                    outputXMLString.deleteCharAt(outputXMLString.length()-1);
+                }
+                continue;
+            }
+
+            // opening content tag
+            // uses contains instead of endsWith to catch opening tags that also contain text data
+            if (content.contains(">") && !content.startsWith("/")){
+                currentPath.add(content.substring(0,content.indexOf(">")));
+            }
+
+
+            // closing content tag
+            else if (content.endsWith(">") && content.startsWith("/")){
+
+                // is the last string in the path (the final key) the tag being closed here?
+                if (pathList.get(pathList.size()-1).equals(content.substring(1,content.length()-1)) && foundCorrectPath && currentPath.equals(pathList)){
+                    outputXMLString.append(content);
+                    break;
+                }
+
+                if (currentPath.size() > 0) {
+                    currentPath.remove(currentPath.size() - 1);
+                }
+            }
+
+            // if the current path is equal to the pathList, we found the opening tag of the JSONObject we want
+            // and therefore we should start recording its contents into outputXMLString (denoted by foundCorrectPath)
+            if (!foundCorrectPath && currentPath.equals(pathList)){
+                foundCorrectPath = true;
+                outputXMLString.append("<");
+            }
+
+            if (foundCorrectPath) {
+                outputXMLString.append(content);
+            }
+
+        }
+        // convert the XML String representing the requested object to a JSONObject
+        jo = toJSONObject(outputXMLString.toString());
+
+        try {
+            reader.close();
+        }
+        catch(IOException ex){
+            System.err.println("Failed to close reader");
+        }
+
+        return jo;
+    }
+
+
+    // Milestone 2 Part 2
+    // Uses my own parse() implementation to find the desired path (similar to above), and reads in the replacement object
+    // if an empty path is passed in, simply return the replacement object
+    // if the path does not exist, return a JSONObject representing the unchanged base file
+    // a malformed xml throws a JSONException
+    public static JSONObject toJSONObject(Reader reader, JSONPointer path, JSONObject replacement){
+        JSONObject jo;
+        XMLTokener x = new XMLTokener(reader);
+
+        // String containing the current XMLTokener's "content"
+        String content;
+
+        // holds the contents of the current path (each string being a tag)
+        ArrayList<String> currentPath = new ArrayList<>();
+
+        // List containing each path key
+        ArrayList<String> pathList = new ArrayList<>();
+        pathList.addAll(Arrays.asList(path.toString().split("/")));
+
+
+        // if the path is empty, return the replacement object
+        if (pathList.size() == 0){
+            try {
+                reader.close();
+            }
+            catch(IOException ex){
+                System.err.println("Failed to close reader");
+            }
+            return replacement;
+        }
+
+        // remove the empty key left over from splitting the string
+        pathList.remove(0);
+
+        // XML as string built containing all the XML elements seen so far
+        StringBuilder outputXMLString = new StringBuilder();
+
+        
+        // write to outputXMLString?
+        boolean writing = true;
+
+        while (x.more()) {
+            content = x.nextContent().toString();
+
+
+            // ignore xml content tags
+            if (content.startsWith("?") || content.startsWith("!")){
+                // if we see one of these ignored symbols and the last content was an opening tag, remove it
+                if (outputXMLString.length() > 0 && outputXMLString.substring(outputXMLString.length()-1).equals("<")){
+                    outputXMLString.deleteCharAt(outputXMLString.length()-1);
+                }
+                continue;
+            }
+
+
+            // opening content tag
+            // uses contains instead of endsWith to catch opening tags that also contain text data
+            if (content.contains(">") && !content.startsWith("/")){
+                currentPath.add(content.substring(0,content.indexOf(">")));
+            }
+
+
+            // closing content tag
+            else if (content.endsWith(">") && content.startsWith("/")){
+
+                // is the last string in the path (the final key) the tag being closed here?
+                if (pathList.get(pathList.size()-1).equals(content.substring(1,content.length()-1)) && !writing && currentPath.equals(pathList)){
+                    outputXMLString.append("<");
+                    writing = true;
+                }
+
+                if (currentPath.size() > 0) {
+                    currentPath.remove(currentPath.size() - 1);
+                }
+            }
+
+            if (writing) {
+
+                if (content.contains(">") && !content.startsWith("/") && currentPath.equals(pathList)){
+                    outputXMLString.append(content.substring(0,content.indexOf(">")+1));
+                }
+                else{
+                    outputXMLString.append(content);
+                }
+
+            }
+
+            // if the current path is equal to the pathList, we found the opening tag of the JSONObject we want
+            // and therefore we should stop writing contents until the tag is closed, writing instead the replacement JSONObject
+            if (writing && currentPath.equals(pathList)){
+                writing = false;
+
+                outputXMLString.append(XML.toString(replacement));
+            }
+
+        }
+        // convert the XML String representing the requested object to a JSONObject
+        jo = toJSONObject(outputXMLString.toString());
+
+        try {
+            reader.close();
+        }
+        catch(IOException ex){
+            System.err.println("Failed to close reader");
+        }
+
+        return jo;
+    }
+
+    // Milestone 2 - build JSONPointerFromPath helper function
+    // build a JSONPointer from a JSON path string
+    public static JSONPointer buildJSONPointerFromPath(String subObjectPath) {
+
+        JSONPointer.Builder pointerBuilder = JSONPointer.builder();
+
+        // split path by either \ or / (regex)
+        String[] splitPath = subObjectPath.split("\\/|\\\\");
+
+        // correctly handle JSONObjects and JSONArrays
+        for (String path : splitPath) {
+            try{
+                int arrayIndex = Integer.parseInt(path);
+                pointerBuilder.append(arrayIndex);
+            }
+            catch (NumberFormatException x) {
+                pointerBuilder.append(path);
+            }
+        }
+        return pointerBuilder.build();
     }
 
     /**

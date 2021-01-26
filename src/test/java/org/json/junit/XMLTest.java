@@ -30,24 +30,11 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.StringReader;
+import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.json.JSONTokener;
-import org.json.XML;
-import org.json.XMLParserConfiguration;
-import org.json.XMLXsiTypeConverter;
+import org.json.*;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -64,6 +51,223 @@ public class XMLTest {
      */
     @Rule
     public TemporaryFolder testFolder = new TemporaryFolder();
+
+
+
+
+
+
+    // Tests for Milestone 2:
+
+
+    // Part 1 Tests
+    /**
+     * Get JSONObject from path, using a path that doesnt exist
+     * Expects an empty jsonObject returned
+     */
+    @Test
+    public void part1NonexistentPath() {
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader("./xmls/Issue537.xml"));
+            JSONPointer pointer = XML.buildJSONPointerFromPath("doesntexist");
+            JSONObject jsonObject = XML.toJSONObject(reader, pointer);
+            assertTrue("jsonObject should be empty", jsonObject.isEmpty());
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+
+    }
+
+    /**
+     * Get JSONObject from path, using an empty path
+     * Expects a jsonObject containing the entire XML file
+     */
+    @Test
+    public void part1EmptyPath() {
+        try {
+            BufferedReader reader1 = new BufferedReader(new FileReader("./xmls/Issue537.xml"));
+            BufferedReader reader2 = new BufferedReader(new FileReader("./xmls/Issue537.xml"));
+            JSONPointer pointer1 = XML.buildJSONPointerFromPath("");
+
+            // read xml with plain toJSONObject, ensure its the same as the empty path version
+            JSONObject jsonObject = XML.toJSONObject(reader1, pointer1);
+            JSONObject jsonObject2 = XML.toJSONObject(reader2);
+            assertEquals(jsonObject.toString(), jsonObject2.toString());
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+
+    }
+
+    /**
+     * Get JSONObject from path, using a valid path that is not an innermost key
+     * Expects a jsonObject containing the last key in the paths' key and its contents {brief_summary: {[contents]}}
+     */
+    @Test
+    public void part1ValidPath() {
+        try {
+            BufferedReader reader1 = new BufferedReader(new FileReader("./xmls/Issue537.xml"));
+            JSONPointer pointer1 = XML.buildJSONPointerFromPath("clinical_study/brief_summary");
+
+            // ensure the read in object at the specific path is equal to the json that should be found there
+            JSONObject jsonObject = XML.toJSONObject(reader1, pointer1);
+            JSONObject jsonObject2 = new JSONObject("{\"brief_summary\": {\"textblock\": \"CLEAR SYNERGY is an international multi center 2x2 randomized placebo controlled trial of\"}}");
+            assertEquals(jsonObject.toString(), jsonObject2.toString());
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+
+    }
+
+    /**
+     * Get JSONObject from path, using a valid path that is an innermost key
+     * Expects a jsonObject containing the last key in the paths' key and its value {brief_summary: value}
+     */
+    @Test
+    public void part1InnermostPath() {
+        try {
+            BufferedReader reader1 = new BufferedReader(new FileReader("./xmls/Issue537.xml"));
+            JSONPointer pointer1 = XML.buildJSONPointerFromPath("clinical_study/brief_summary/textblock");
+
+            // ensure the read in object at the specific path is equal to the json that should be found there
+            JSONObject jsonObject = XML.toJSONObject(reader1, pointer1);
+            JSONObject jsonObject2 = new JSONObject("{\"textblock\": \"CLEAR SYNERGY is an international multi center 2x2 randomized placebo controlled trial of\"}");
+            assertEquals(jsonObject.toString(), jsonObject2.toString());
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+
+    }
+
+    /**
+     * JSONObject from a malformed xml file
+     * Expects an empty jsonObject
+     */
+    @Test
+    public void part1MalformedXML() {
+        try {
+            BufferedReader reader1 = new BufferedReader(new FileReader("./xmls/Issue537-malformed.xml"));
+            JSONPointer pointer1 = XML.buildJSONPointerFromPath("clinical_study/brief_summary");
+
+            // ensure the read in object at the specific path is equal to the json that should be found there
+            JSONObject jsonObject = XML.toJSONObject(reader1, pointer1);
+
+            assertTrue(jsonObject.isEmpty());
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+    }
+
+    // Part 2 Tests
+
+    /**
+     * Get JSONObject from path, using a path that doesnt exist
+     * Expects a JSONObject containing the entirely of the unchanged XML file
+     */
+    @Test
+    public void part2NonexistentPath() {
+        try {
+            BufferedReader reader1 = new BufferedReader(new FileReader("./xmls/Issue537.xml"));
+            BufferedReader reader2 = new BufferedReader(new FileReader("./xmls/Issue537.xml"));
+            JSONPointer pointer1 = XML.buildJSONPointerFromPath("doesntexist");
+            JSONObject replacement = new JSONObject("{\"newKey1\": \"newValue1\", \"newKey2\": \"newValue2\", \"newKey3\": \"newValue3\"}");
+
+            // ensure the function when passed in a nonexistent path returns the same as the buit in function
+            JSONObject jsonObject = XML.toJSONObject(reader1, pointer1, replacement);
+            JSONObject jsonObject2 = XML.toJSONObject(reader2);
+
+            assertEquals(jsonObject.toString(), jsonObject2.toString());
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+
+    }
+
+    /**
+     * Get JSONObject from path, using an empty path
+     * Expects a jsonObject containing the replacement json
+     */
+    @Test
+    public void part2EmptyPath() {
+        try {
+            BufferedReader reader1 = new BufferedReader(new FileReader("./xmls/Issue537.xml"));
+            JSONPointer pointer1 = XML.buildJSONPointerFromPath("");
+            JSONObject replacement = new JSONObject("{\"newKey1\": \"newValue1\", \"newKey2\": \"newValue2\", \"newKey3\": \"newValue3\"}");
+
+            // ensure the returned object is simply the replacement object
+            JSONObject jsonObject = XML.toJSONObject(reader1, pointer1, replacement);
+            assertEquals(jsonObject.toString(), replacement.toString());
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+
+    }
+
+    /**
+     * Get JSONObject from path, using a valid path that is not an innermost key
+     * Expects a jsonObject containing the xml contents replaced with the replacement object
+     */
+    @Test
+    public void part2ValidPath() {
+        try {
+            BufferedReader reader1 = new BufferedReader(new FileReader("./xmls/Issue537.xml"));
+            BufferedReader reader2 = new BufferedReader(new FileReader("./xmls/Issue537-part2ValidPath.json"));
+            JSONPointer pointer1 = XML.buildJSONPointerFromPath("clinical_study/brief_summary");
+            JSONObject replacement = new JSONObject("{\"newKey1\": \"newValue1\", \"newKey2\": \"newValue2\", \"newKey3\": \"newValue3\"}");
+
+            // ensure the final JSONObject is equal to the original with the given path replaced
+            JSONObject jsonObject = XML.toJSONObject(reader1, pointer1, replacement);
+            JSONObject jsonObject2 = new JSONObject(new JSONTokener(reader2));
+            assertEquals(jsonObject.toString(), jsonObject2.toString());
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+
+    }
+
+    /**
+     * Get JSONObject from path, using a valid path that is the innermost key
+     * Expects a jsonObject containing the key's contents replaced with the replacement object
+     */
+    @Test
+    public void part2InnermostPath() {
+        try {
+            BufferedReader reader1 = new BufferedReader(new FileReader("./xmls/Issue537.xml"));
+            BufferedReader reader2 = new BufferedReader(new FileReader("./xmls/Issue537-part2InnermostPath.json"));
+            JSONPointer pointer1 = XML.buildJSONPointerFromPath("clinical_study/brief_summary/textblock");
+            JSONObject replacement = new JSONObject("{\"newKey1\": \"newValue1\", \"newKey2\": \"newValue2\", \"newKey3\": \"newValue3\"}");
+
+            // ensure the final JSONObject is equal to the original with the given innermost key path replaced
+            JSONObject jsonObject = XML.toJSONObject(reader1, pointer1, replacement);
+            JSONObject jsonObject2 = new JSONObject(new JSONTokener(reader2));
+            assertEquals(jsonObject.toString(), jsonObject2.toString());
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+
+    }
+
+    /**
+     * JSONObject from a malformed xml file
+     * Expects a JSONException thrown
+     */
+    @Test(expected=JSONException.class)
+    public void part2MalformedXML() {
+        try {
+            BufferedReader reader1 = new BufferedReader(new FileReader("./xmls/Issue537-malformed.xml"));
+            JSONPointer pointer1 = XML.buildJSONPointerFromPath("clinical_study/brief_summary");
+            JSONObject replacement = new JSONObject("{\"newKey1\": \"newValue1\", \"newKey2\": \"newValue2\", \"newKey3\": \"newValue3\"}");
+
+            // ensure that reading in the malformed xml object throws a JSONException
+            JSONObject jsonObject = XML.toJSONObject(reader1, pointer1, replacement);
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+    }
+
+
+    // END Milestone 2 Tests
+
 
     /**
      * JSONObject from a null XML string.
