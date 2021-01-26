@@ -663,11 +663,11 @@ public class XML {
     }
 
     // Milestone 2: My own implementation of parse() in order to stop searching for object once found
+    // Stores sub object into JSON object containing the object itself and its key
     // If the path is found, stops running once the path's innermost keys are closed
     // Returns a JSONObject holding the contents of the given key path, with a key representing the key path's innermost key
-    // Returns an empty JSONObject if the keypath is not found, throws JSONException if the xml is malformed
+    // Returns an empty JSONObject if the keypath is not found or XML malformed
     // Returns a JSONObject containing the entire xml contents if the path is empty
-    // Malformed XML returns empty objects
     public static JSONObject toJSONObject(Reader reader, JSONPointer path) throws JSONException {
 
         JSONObject jo;
@@ -796,7 +796,7 @@ public class XML {
         // XML as string built containing all the XML elements seen so far
         StringBuilder outputXMLString = new StringBuilder();
 
-        
+
         // write to outputXMLString?
         boolean writing = true;
 
