@@ -33,6 +33,7 @@ import static org.junit.Assert.fail;
 import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 import org.json.*;
 import org.junit.Rule;
@@ -267,6 +268,80 @@ public class XMLTest {
 
 
     // END Milestone 2 Tests
+
+
+    // Milestone 3 Tests
+
+    /**
+     * Read in XML file to JSONObject, adding "swe262_" to the beginning of each key
+     * Expects a jsonObject containing the json version of the passed in XML, with each key being transformed by
+     * the keyTransformer "simpleTransformer", that adds "swe262_" to the beginning of the string
+     */
+    @Test
+    public void milestone3SimpleTransformer() {
+        try {
+            BufferedReader reader1 = new BufferedReader(new FileReader("./xmls/Issue537-snippet.xml"));
+            BufferedReader reader2 = new BufferedReader(new FileReader("./xmls/Issue537-snippet-swe262Prefix.json"));
+
+            Function<String, String> simpleTransformer = (String key)->( "swe262_" + key );
+
+            // ensure that the read in xml (Issue537-snippet.xml) is properly transformed to resemble
+            // Issue537-snippet-swe262Prefix.json (Issue537-snippet.xml converted to JSON by built in XML.toJSONObject()
+            // with manually added swe262_ prefixes on each tag)
+            JSONObject jsonObject1 = XML.toJSONObject(reader1, simpleTransformer);
+            JSONObject jsonObject2 = new JSONObject(new JSONTokener(reader2));
+
+            assertEquals(jsonObject2.toString(), jsonObject1.toString());
+
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+
+    }
+
+    /**
+     * Read in XML file to JSONObject, with an "identity" transformer that does not change the key
+     * Expects a jsonObject that is the same as the jsonObject returned by the built-in XML.toJSONObject()
+     */
+    @Test
+    public void milestone3IdentityTransformer() {
+        try {
+            BufferedReader reader1 = new BufferedReader(new FileReader("./xmls/Issue537.xml"));
+            BufferedReader reader2 = new BufferedReader(new FileReader("./xmls/Issue537.xml"));
+
+            // identity transformer that returns the same string that was passed in
+            Function<String, String> identityTransformer = (String key)->( key );
+
+            // ensure that the read in xml using the identityTransformer returns the exact same JSONObject
+            // as the built in XML.toJSONObject would for the entire Issue537.xml
+            JSONObject jsonObject1 = XML.toJSONObject(reader1, identityTransformer);
+            JSONObject jsonObject2 = XML.toJSONObject(reader2);
+
+            assertEquals(jsonObject2.toString(), jsonObject1.toString());
+
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+    }
+
+    /**
+     * JSONObject from a malformed xml file
+     * Expects a JSONException thrown
+     */
+    @Test(expected=JSONException.class)
+    public void milestone3MalformedXML() {
+        try {
+            BufferedReader reader1 = new BufferedReader(new FileReader("./xmls/Issue537-malformed.xml"));
+            Function<String, String> simpleTransformer = (String key)->( "swe262_" + key );
+
+            // ensure that reading in the malformed xml object throws a JSONException
+            JSONObject jsonObject = XML.toJSONObject(reader1, simpleTransformer);
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+    }
+
+    // END Milestone 3 Tests
 
 
     /**

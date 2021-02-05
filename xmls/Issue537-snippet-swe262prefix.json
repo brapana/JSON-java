@@ -1,0 +1,42 @@
+{
+  "swe262_clinical_study": {
+    "swe262_official_title": "Studies on the Effects of Colchicine on Neutrophil Biology in Acute Myocardial Infarction: A Substudy of the CLEAR SYNERGY (OASIS 9) Trial",
+    "swe262_brief_summary": {
+      "swe262_textblock": "CLEAR SYNERGY is an international multi center 2x2 randomized placebo controlled trial of"
+    },
+    "swe262_required_header": {
+      "swe262_download_date": "ClinicalTrials.gov processed this data on July 19, 2020",
+      "swe262_link_text": "Link to the current ClinicalTrials.gov record.",
+      "swe262_url": "https://clinicaltrials.gov/show/NCT03874338"
+    },
+    "swe262_brief_title": "CLEAR SYNERGY Neutrophil Substudy",
+    "swe262_sponsors": {
+      "swe262_lead_sponsor": {
+        "swe262_agency_class": "Other",
+        "swe262_agency": "NYU Langone Health"
+      },
+      "swe262_collaborator": [
+        {
+          "swe262_agency_class": "Other",
+          "swe262_agency": "Population Health Research Institute"
+        },
+        {
+          "swe262_agency_class": "NIH",
+          "swe262_agency": "National Heart, Lung, and Blood Institute (NHLBI)"
+        }
+      ]
+    },
+	"swe262_id_info": {
+      "swe262_nct_id": "NCT03874338",
+      "swe262_org_study_id": "18-01323",
+      "swe262_secondary_id": "1R01HL146206"
+    },
+    "swe262_oversight_info": {
+	"swe262_has_dmc": "No",
+      "swe262_is_fda_regulated_drug": "No",
+      "swe262_is_fda_regulated_device": "No"
+    },
+    "swe262_source": "NYU Langone Health"
+
+  }
+}

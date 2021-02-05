@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Function;
 
 
 /**
@@ -888,6 +889,71 @@ public class XML {
             }
         }
         return pointerBuilder.build();
+    }
+
+    // Milestone 3
+    // uses my own implementation of parse() that applies the keyTransformer functional
+    // (function that takes a string and returns a string) to every key as the XML is parsed.
+    // if a null keyTransformer is passed in, simply return the original object.
+    // a malformed xml throws a JSONException
+    public static JSONObject toJSONObject(Reader reader, Function<String, String> keyTransformer){
+        // if the keyTransformer is null, simply return the unchanged JSON representation
+        if (keyTransformer == null){
+            return toJSONObject(reader);
+        }
+
+        JSONObject jo;
+        XMLTokener x = new XMLTokener(reader);
+
+        // String containing the current XMLTokener's "content"
+        String content;
+
+        // XML as string built containing all the XML elements seen so far
+        StringBuilder outputXMLString = new StringBuilder();
+
+        while (x.more()) {
+            content = x.nextContent().toString();
+
+            // ignore xml content tags
+            if (content.startsWith("?") || content.startsWith("!")){
+                // if we see one of these ignored symbols and the last content was an opening tag, remove it
+                if (outputXMLString.length() > 0 && outputXMLString.substring(outputXMLString.length()-1).equals("<")){
+                    outputXMLString.deleteCharAt(outputXMLString.length()-1);
+                }
+                continue;
+            }
+
+            // opening content tag
+            // uses contains instead of endsWith to catch opening tags that also contain text data
+            // extracts just the key string and transforms it using keyTransformer, then adds the remaining data back
+            if (content.contains(">") && !content.startsWith("/")){
+                String key = content.substring(0,content.indexOf(">"));
+                String remainingContent = content.substring(content.indexOf(">"));
+                content = keyTransformer.apply(key) + remainingContent;
+            }
+
+            // closing content tag
+            // extracts just the key and transforms it using keyTransformer
+            // then adds back the beginning "/" and ending ">"
+            else if (content.endsWith(">") && content.startsWith("/")){
+                String key = content.substring(1,content.length()-1);
+                content = "/" + keyTransformer.apply(key) + ">";
+            }
+
+            outputXMLString.append(content);
+
+        }
+        // convert the XML String representing the requested object to a JSONObject
+        jo = toJSONObject(outputXMLString.toString());
+
+        try {
+            reader.close();
+        }
+        catch(IOException ex){
+            System.err.println("Failed to close reader");
+        }
+
+        return jo;
     }
 
     /**
