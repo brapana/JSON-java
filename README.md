@@ -2,9 +2,11 @@
 
 Changes made within XML.java starting on line 894 and ending on line 957.
 
-Unit Tests for added functionality located in XMLTest.java starting on line 273 and ending on line 344 (3 total)
+Unit Tests for added functionality located in XMLTest.java starting on line 273 and ending on line 344 (3 total).
 
 Clarifying comments located throughout the code. 
+
+Project language changed from 1.7->1.8 (sourceCompatibility in build.gradle) in order to allow for use of Functionals necessary for Milestone 3.
 
 ## Milestone 3 Function:
 
@@ -24,7 +26,7 @@ Performance Implications: Writing this function within the library code itself a
 
 Changes made within XML.java starting on line 665 and ending on line 891.
 
-Unit Tests located in XMLTest.java starting on line 60 and ending on line 269 (10 total, 5 per function)
+Unit Tests located in XMLTest.java starting on line 60 and ending on line 269 (10 total, 5 per function).
 
 Clarifying comments located throughout the code.
 
