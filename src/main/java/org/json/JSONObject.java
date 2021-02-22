@@ -36,16 +36,10 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Collection;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.ResourceBundle;
-import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 /**
  * A JSONObject is an unordered collection of name/value pairs. Its external
@@ -101,6 +95,96 @@ import java.util.regex.Pattern;
  * @version 2016-08-15
  */
 public class JSONObject {
+
+    // BEGIN Milestone 4
+
+    // stream builder used by buildJsonStream to create a stream of leaf nodes
+    private Stream.Builder<JSONObject> jsonStreamBuilder;
+
+    /**
+     * Milestone 4
+     * Builds a json stream into the above jsonStreamBuilder.
+     * Traverses the JSONObject and returns each leaf node as a part of the stream.
+     * A leaf node is a JSONObject representing an innermost collection of key-value pairs
+     * For example, for a JSONObject containing 5 keys, 3 of them being nested JSON, one part
+     * of the stream will be a JSONObject containing the two non-JSON keys and their values,
+     * and another part of the stream will be the eventual non-JSON keys and values within the
+     * nested JSONs. Works recursively.
+     *
+     * containingKey represents the key string that contains the
+     */
+    public void buildJsonStream(Object json, String containingKey) {
+        JSONObject newJsonObject = null;
+        // if the object is a JSONObject, iterate over its keys and values
+        if (json instanceof JSONObject) {
+            for (Entry<String, Object> entry : ((JSONObject)json).entrySet()) {
+                // if the value of this JSONObject's key is a JSONObject or JSONArray, recurse on it
+                if (entry.getValue() instanceof JSONObject || entry.getValue() instanceof JSONArray) {
+                    buildJsonStream(entry.getValue(), entry.getKey());
+                }
+                // if the value is not a nested JSONObject/JSONArray, accumulate the key and value into a new JSONObject
+                else {
+                    if (newJsonObject == null) {
+                        newJsonObject = new JSONObject();
+                    }
+                    newJsonObject.accumulate(entry.getKey(), entry.getValue());
+
+                }
+            }
+
+            // if a newJSONObject was created while iterating over the keys/values, add it to the jsonStreamBuilder
+            if (newJsonObject != null) {
+                jsonStreamBuilder.accept(newJsonObject);
+            }
+        }
+        // if the object is a JSONArray, iterate over its values
+        else if (json instanceof JSONArray) {
+            for (Object obj : (JSONArray)json) {
+
+                // if there is a nested JSONObject or JSONArray, recurse on it
+                if (obj instanceof JSONObject || obj instanceof JSONArray) {
+                    buildJsonStream(obj, containingKey);
+                }
+                // if the value is not a JSONObject or JSONArray, accumulate its value and the containingKey
+                // (accumulating the containingKey multiple times will create an Array of the values as the value of containingKey)
+                else{
+                    if (newJsonObject == null) {
+                        newJsonObject = new JSONObject();
+                    }
+                    newJsonObject.accumulate(containingKey, obj);
+                }
+            }
+
+            // if a newJSONObject was created while iterating over the keys/values, add it to the jsonStreamBuilder
+            if (newJsonObject != null) {
+                jsonStreamBuilder.accept(newJsonObject);
+            }
+        }
+        // if the object passed into this function is not a JSONObject or JSONArray, something wrong has happened
+        else {
+            System.err.println("This should not happen...");
+            System.err.println("Tried to build JSON stream on non-JSON object: " + json.toString());
+        }
+    }
+
+
+    /**
+     * Milestone 4: builds and returns a stream representation of the JSONObject.
+     * See buildJsonStream()
+     */
+    public Stream<JSONObject> toStream() {
+
+        // initialize stream builder
+        jsonStreamBuilder = Stream.builder();
+
+        // build the JsonStream starting from this object's root
+        buildJsonStream(this, "");
+
+        return jsonStreamBuilder.build();
+    }
+
+    // END Milestone 4
+
     /**
      * JSONObject.NULL is equivalent to the value that JavaScript calls null,
      * whilst Java's null is equivalent to the value that JavaScript calls

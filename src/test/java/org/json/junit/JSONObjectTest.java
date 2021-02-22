@@ -34,10 +34,8 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.StringReader;
-import java.io.StringWriter;
+import java.io.*;
+import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -50,6 +48,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.json.CDL;
 import org.json.JSONArray;
@@ -93,6 +92,158 @@ public class JSONObjectTest {
      *  output to guarantee that we are always writing valid JSON. 
      */
     static final Pattern NUMBER_PATTERN = Pattern.compile("-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?");
+
+
+    // Milestone 4 Tests
+
+    /**
+     * Tests that running .toStream() on the JSONObject returned by XML.toJSONObject("./xmls/Issue537-snippet.xml")
+     * correctly returns a stream that outputs each JSONObject leaf node as a separate part of the stream.
+     * Adds each part of the stream to a List and asserts that its contents are the same as a manually created list.
+     */
+    @Test
+    public void milestone4StreamContainsAllNodes() {
+
+        try {
+            // Read in a JSONObject of the Issue537-snippet.xml file
+            BufferedReader reader1 = new BufferedReader(new FileReader("./xmls/Issue537-snippet.xml"));
+            JSONObject jsonObject = XML.toJSONObject(reader1);
+
+            // List of JSONObjects that represents expected outputs from toStream() on Issue537-snippet.xml's JSONObject
+            List<JSONObject> expectedJsonList = new ArrayList<>();
+            expectedJsonList.add(new JSONObject("{\"textblock\":\"CLEAR SYNERGY is an international multi center 2x2 randomized placebo controlled trial of\"}"));
+            expectedJsonList.add(new JSONObject("{\"download_date\":\"ClinicalTrials.gov processed this data on July 19, 2020\",\"link_text\":\"Link to the current ClinicalTrials.gov record.\",\"url\":\"https://clinicaltrials.gov/show/NCT03874338\"}"));
+            expectedJsonList.add(new JSONObject("{\"agency_class\":\"Other\",\"agency\":\"NYU Langone Health\"}"));
+            expectedJsonList.add(new JSONObject("{\"agency_class\":\"Other\",\"agency\":\"Population Health Research Institute\"}"));
+            expectedJsonList.add(new JSONObject("{\"agency_class\":\"NIH\",\"agency\":\"National Heart, Lung, and Blood Institute (NHLBI)\"}"));
+            expectedJsonList.add(new JSONObject("{\"is_fda_regulated_drug\":\"No\",\"is_fda_regulated_device\":\"No\",\"has_dmc\":\"No\"}"));
+            expectedJsonList.add(new JSONObject("{\"nct_id\":\"NCT03874338\",\"org_study_id\":\"18-01323\",\"secondary_id\":\"1R01HL146206\"}"));
+            expectedJsonList.add(new JSONObject("{\"official_title\":\"Studies on the Effects of Colchicine on Neutrophil Biology in Acute Myocardial Infarction: A Substudy of the CLEAR SYNERGY (OASIS 9) Trial\",\"brief_title\":\"CLEAR SYNERGY Neutrophil Substudy\",\"source\":\"NYU Langone Health\"}"));
+
+            // read in each JSONObject to streamJsonList,
+            // each part of the stream (JSONObject leaf nodes) are added as a separate item to the list
+            List<JSONObject> streamJsonList = jsonObject.toStream().collect(Collectors.toList());
+
+            // assert that the string representation of the list of JSON objects equals the constructed expected list
+            assertEquals(expectedJsonList.toString(), streamJsonList.toString());
+
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+
+    }
+
+    /**
+     * Tests that running .toStream() on the JSONObject returned by XML.toJSONObject("./xmls/Issue537.xml")
+     * correctly returns a stream that can be filtered on JSONObject properties like .has()
+     * Filters the stream to return only JSONObjects that contain the key "description",
+     * and asserts that the collected list equals a manually constructed list.
+     */
+    @Test
+    public void milestone4StreamFilter() {
+
+        try {
+            // Read in a JSONObject of the Issue537.xml file
+            BufferedReader reader1 = new BufferedReader(new FileReader("./xmls/Issue537.xml"));
+            JSONObject jsonObject = XML.toJSONObject(reader1);
+
+            // create a list of JSONObjects representing each leaf JSONObject containing a "description" key
+            // that should be returned by .filter(node -> node.has("description")).collect(Collectors.toList())
+            List<JSONObject> expectedJsonList = new ArrayList<>();
+            expectedJsonList.add(new JSONObject("{\"measure\":\"soluble L-selectin\",\"time_frame\":\"between baseline and 3 months\",\"description\":\"Change in soluble L-selectin between baseline and 3 mo after STEMI in the placebo vs. colchicine groups.\"}"));
+            expectedJsonList.add(new JSONObject("{\"measure\":\"Other soluble markers of neutrophil activity\",\"time_frame\":\"between baseline and 3 months\",\"description\":\"Other markers of neutrophil activity will be evaluated at baseline and 3 months after STEMI (myeloperoxidase, matrix metalloproteinase-9, neutrophil gelatinase-associated lipocalin, neutrophil elastase, intercellular/vascular cellular adhesion molecules)\"}"));
+            expectedJsonList.add(new JSONObject("{\"measure\":\"Markers of systemic inflammation\",\"time_frame\":\"between baseline and 3 months\",\"description\":\"Markers of systemic inflammation will be evaluated at baseline and 3 months after STEMI (high sensitive CRP, IL-1Î²)\"}"));
+            expectedJsonList.add(new JSONObject("{\"measure\":\"Neutrophil-driven responses that may further propagate injury\",\"time_frame\":\"between baseline and 3 months\",\"description\":\"Neutrophil-driven responses that may further propagate injury will be evaluated at baseline and 3 months after STEMI (neutrophil extracellular traps, neutrophil-derived microparticles)\"}"));
+            expectedJsonList.add(new JSONObject("{\"intervention_type\":\"Drug\",\"description\":\"Participants in the main CLEAR SYNERGY trial are randomized to colchicine/spironolactone versus placebo in a 2x2 factorial design. The substudy is interested in the evaluation of biospecimens obtained from patients in the colchicine vs placebo group.\",\"intervention_name\":\"Colchicine Pill\"}"));
+
+            // filter the stream to return only JSONObjects that contain the key "description"
+            List<JSONObject> filteredStreamList = jsonObject.toStream().filter(node -> node.has("description")).collect(Collectors.toList());
+
+            // assert the filtered stream and the constructed expected list are equal
+            assertEquals(expectedJsonList.toString(), filteredStreamList.toString());
+
+
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+
+    }
+
+    /**
+     * Tests that running .toStream() on the JSONObject returned by XML.toJSONObject("./xmls/Issue537-snippet.xml")
+     * correctly returns a stream that can be mapped with .map.
+     * Maps the JSONObject stream to a stream of ArrayLists containing only the keys found in each JSONObject.
+     * Asserts that the manually constructed list of keys equals the one generated within the stream.
+     */
+    @Test
+    public void milestone4StreamMap() {
+
+        try {
+            // Read in a JSONObject of the Issue537-snippet.xml file
+            BufferedReader reader1 = new BufferedReader(new FileReader("./xmls/Issue537-snippet.xml"));
+            JSONObject jsonObject = XML.toJSONObject(reader1);
+
+            // create a list of JSONObjects representing each leaf JSONObject containing a "description" key
+            // that should be returned by .filter(node -> node.has("description")).collect(Collectors.toList())
+            List<List<String>> expectedKeys = new ArrayList<>();
+            expectedKeys.add(Arrays.asList("textblock"));
+            expectedKeys.add(Arrays.asList("download_date", "link_text", "url"));
+            expectedKeys.add(Arrays.asList("agency_class", "agency"));
+            expectedKeys.add(Arrays.asList("agency_class", "agency"));
+            expectedKeys.add(Arrays.asList("agency_class", "agency"));
+            expectedKeys.add(Arrays.asList("is_fda_regulated_drug", "is_fda_regulated_device", "has_dmc"));
+            expectedKeys.add(Arrays.asList("nct_id", "org_study_id", "secondary_id"));
+            expectedKeys.add(Arrays.asList("official_title", "brief_title", "source"));
+
+
+            // map each JSONObject into a list containing the keys contained within each object, and collect them into a list
+            List<List<String>> keysList = jsonObject.toStream().map(node -> new ArrayList<>(node.keySet())).collect(Collectors.toList());
+
+            // assert the expected list of keys equals the list generated by the above statement
+            assertEquals(expectedKeys, keysList);
+
+
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+
+    }
+
+
+    /**
+     * Tests that running .toStream() on the JSONObject returned by XML.toJSONObject("./xmls/Issue537.xml")
+     * correctly returns a stream where forEach can be used.
+     * Using forEach, accumulates a value "newValue" into the key "_newKey" for each JSONObject and adds it
+     * to a list. Asserts that every JSONObject now contains the "_newKey" key.
+     */
+    @Test
+    public void milestone4StreamForEach() {
+
+        try {
+            // Read in a JSONObject of the Issue537.xml file
+            BufferedReader reader1 = new BufferedReader(new FileReader("./xmls/Issue537.xml"));
+            JSONObject jsonObject = XML.toJSONObject(reader1);
+
+
+            List<JSONObject> jsonStreamList = new ArrayList<>();
+
+            // using forEach, accumulate a "_newKey" key to each JSONObject node and add it to jsonStreamList
+            jsonObject.toStream().forEach(node -> jsonStreamList.add(node.accumulate("_newKey", "newValue")));
+
+            // assert that each JSONObject now contains the "_newKey" key
+            for (JSONObject jsonStreamObject : jsonStreamList) {
+                assertTrue(jsonStreamObject.has("_newKey"));
+            }
+
+
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+
+    }
+
+
+    // END Milestone 4 Tests
 
     /**
      * Tests that the similar method is working as expected.
