@@ -1,3 +1,29 @@
+# SWE 262P Project Milestone 4
+
+Changes made within JSONObject.java starting on line 99 and ending on line 186.
+
+Unit Tests for added functionality located in JSONObjectTest.java starting on line 97 and ending on line 246 (4 total).
+
+Clarifying comments located throughout the code. 
+
+## Milestone 4 Functions:
+
+ public Stream<JSONObject> toStream()
+
+* Builds and returns a Stream<JSONObject>, with each part of the stream representing a leaf node.
+* A leaf node is a JSONObject representing a collection of "innermost" non-JSON-valued key-value pairs.
+* For example, for a JSONObject containing 5 keys, 3 of them being nested JSON, one part of the stream will be a JSONObject containing the two non-JSON keys and their values, and another part of the stream will be the eventual non-JSON keys and values within the nested JSONs.
+* Uses buildJsonStream() to build the Stream<JSONObject>.
+
+
+public void buildJsonStream(Object json, String containingKey)
+
+* Builds the Stream<JSONObject> into the jsonStreamBuilder private class variable (a Stream.Builder<JSONObject> object).
+* Works recursively, allowing for extraction of nested leaf nodes.
+
+
+---
+
 # SWE 262P Project Milestone 3
 
 Changes made within XML.java starting on line 894 and ending on line 957.
