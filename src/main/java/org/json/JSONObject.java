@@ -105,13 +105,14 @@ public class JSONObject {
      * Milestone 4
      * Builds a json stream into the above jsonStreamBuilder.
      * Traverses the JSONObject and returns each leaf node as a part of the stream.
-     * A leaf node is a JSONObject representing an innermost collection of key-value pairs
+     * A leaf node is a JSONObject representing a collection of "innermost" non-JSON-valued key-value pairs
      * For example, for a JSONObject containing 5 keys, 3 of them being nested JSON, one part
      * of the stream will be a JSONObject containing the two non-JSON keys and their values,
      * and another part of the stream will be the eventual non-JSON keys and values within the
      * nested JSONs. Works recursively.
      *
-     * containingKey represents the key string that contains the
+     * containingKey represents the key string that contains the current json object.
+     * json represents either the JSONObject or the JSONArray being recursed.
      */
     public void buildJsonStream(Object json, String containingKey) {
         JSONObject newJsonObject = null;
@@ -170,7 +171,7 @@ public class JSONObject {
 
     /**
      * Milestone 4: builds and returns a stream representation of the JSONObject.
-     * See buildJsonStream()
+     * See above buildJsonStream()
      */
     public Stream<JSONObject> toStream() {
 
