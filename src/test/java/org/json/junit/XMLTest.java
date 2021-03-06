@@ -33,6 +33,9 @@ import static org.junit.Assert.fail;
 import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Function;
 
 import org.json.*;
@@ -343,6 +346,121 @@ public class XMLTest {
 
     // END Milestone 3 Tests
 
+
+    // Milestone 5 Tests
+
+    /**
+     * Tests reading in two XMLs via the new concurrent XML.toJSONObject(reader, Consumer, Consumer).
+     * large2.xml is 18MB while Issue537.xml is 8KB. Even though reading large2.xml starts first,
+     * reader2.xml should finish first, and therefore its JSONObject will be placed/retrieved from
+     * the blockingqueue before large2's. (blockingQueue take() blocks until a JSONObject is
+     * added via the concurrent toJSONObject())
+     */
+    @Test
+    public void milestone5ConcurrentOperations() {
+        try {
+            BufferedReader reader1 = new BufferedReader(new FileReader("./xmls/large2.xml"));
+            BufferedReader reader2 = new BufferedReader(new FileReader("./xmls/Issue537.xml"));
+            BufferedReader reader3 = new BufferedReader(new FileReader("./xmls/large2.xml"));
+            BufferedReader reader4 = new BufferedReader(new FileReader("./xmls/Issue537.xml"));
+
+            // blocking queue to add the JSONObject to
+            BlockingQueue<JSONObject> bqueue = new LinkedBlockingQueue<>();
+
+            // read in large2.xml and add it to bqueue
+            XML.toJSONObject(reader1, (json)->{
+                try {
+                    bqueue.put(json);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }, (e)->{e.printStackTrace();});
+
+            // read in Issue537.xml and add it to bqueue
+            XML.toJSONObject(reader2, (json)->{
+                try {
+                    bqueue.put(json);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }, (e)->{e.printStackTrace();});
+
+            // assert the first JSONObject added to the blockingqueue is the smaller one (Issue537.xml)
+            assertEquals(XML.toJSONObject(reader4).toString(), bqueue.take().toString());
+
+            // assert the second JSONObject added to the blockingqueue is the larger one (large2.xml)
+            assertEquals(XML.toJSONObject(reader3).toString(), bqueue.take().toString());
+
+        } catch (IOException | InterruptedException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+    }
+
+    /**
+     * Tests reading in an XML via the new concurrent XML.toJSONObject(reader, Consumer, Consumer).
+     * The JSONObject output is added to a blockingqueue which is then asserted against the same
+     * XML converted to JSON via XML.toJSONObject(reader) (blockingQueue take() blocks until a JSONObject is
+     * added via the concurrent toJSONObject())
+     */
+    @Test
+    public void milestone5CorrectlyReadXML() {
+        try {
+            BufferedReader reader1 = new BufferedReader(new FileReader("./xmls/Issue537.xml"));
+            BufferedReader reader2 = new BufferedReader(new FileReader("./xmls/Issue537.xml"));
+
+            // blocking queue to add the JSONObject to
+            BlockingQueue<JSONObject> bqueue = new LinkedBlockingQueue<>();
+
+            // read in Issue537.xml and add it to bqueue
+            XML.toJSONObject(reader1, (json)->{
+                try {
+                    bqueue.put(json);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }, (e)->{e.printStackTrace();});
+
+            // assert the JSONObject returned from the concurrent function is the same as the built-in function
+            assertEquals(XML.toJSONObject(reader2).toString(), bqueue.take().toString());
+
+        } catch (IOException | InterruptedException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+    }
+
+    /**
+     * Tests reading in an XML via the new concurrent XML.toJSONObject(reader, Consumer, Consumer).
+     * The Issue537-malformed.xml conversion results in a JSONException that should be passed into the second
+     * functional passed in (puts the exception into the blockingqueue). This exception placed in the blocking queue
+     * is asserted to be of type JSONException
+     * (blockingQueue take() blocks until an Exception is added via the concurrent toJSONObject())
+     */
+    @Test
+    public void milestone5ExceptionLambda() {
+        try {
+            BufferedReader reader1 = new BufferedReader(new FileReader("./xmls/Issue537-malformed.xml"));
+
+            // add the exception output
+            BlockingQueue<Exception> bqueue = new LinkedBlockingQueue<>();
+
+            // ensure that reading in the malformed xml object throws a JSONException that then results in the
+            // second lambda passed in (onFailure) is ran with the Exception as an argument (should be JSONException)
+            XML.toJSONObject(reader1, (json)->{System.out.println(json.toString());}, (e)->{
+                try {
+                    bqueue.put(e);
+                } catch (InterruptedException interruptedException) {
+                    interruptedException.printStackTrace();
+                }
+            });
+
+            // assert the exception returned from the concurrent toJSONObject() is of class JSONException
+            assertTrue(bqueue.take() instanceof JSONException);
+        } catch (IOException | InterruptedException x) {
+            System.err.format("IOException: %s%n", x);
+        }
+    }
+
+    // END Milestone 5 Tests
 
     /**
      * JSONObject from a null XML string.

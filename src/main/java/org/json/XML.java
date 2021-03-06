@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 
@@ -955,6 +956,45 @@ public class XML {
 
         return jo;
     }
+
+
+    // Milestone 5
+    // takes in a reader and two consumers (one functional to execute on the JSONObject that is returned by
+    // toJSONObject(reader), and one to execute on any exception that may be thrown while executing the first)
+    // and executes them in a new Thread via ConcurrentReadJSONObject
+    public static void toJSONObject(Reader reader, Consumer<JSONObject> onSuccess, Consumer<Exception> onFailure){
+        ConcurrentReadJSONObject concurrentReadJSONObject = new ConcurrentReadJSONObject(reader, onSuccess, onFailure);
+        Thread t = new Thread(concurrentReadJSONObject);
+        t.start();
+    }
+
+    // Object implementing runnable that takes in a reader and two consumers (functionals that take in a single type
+    // and return nothing), one of type JSONObject to run on the JSONObject returned by toJSONObject(reader),
+    // and one to run in the case that the first consumer throws an exception.
+    private static class ConcurrentReadJSONObject implements Runnable {
+
+        private Reader reader;
+        private Consumer<JSONObject> onSuccess;
+        private Consumer<Exception> onFailure;
+
+        public ConcurrentReadJSONObject(Reader reader, Consumer<JSONObject> onSuccess, Consumer<Exception> onFailure) {
+            this.reader = reader;
+            this.onSuccess = onSuccess;
+            this.onFailure = onFailure;
+        }
+
+        public void run() {
+            try {
+                JSONObject json = toJSONObject(reader);
+                onSuccess.accept(json);
+            }
+            catch (Exception e) {
+                onFailure.accept(e);
+            }
+        }
+    }
+
+    // END Milestone 5
 
     /**
      * Convert a well-formed (but not necessarily valid) XML string into a
