@@ -1,3 +1,30 @@
+# SWE 262P Project Milestone 5
+
+Changes made within XML.java starting on line 961 and ending on line 997.
+
+Unit Tests for added functionality located in XMLTest.java starting on line 350 and ending on line 463 (3 total).
+
+Clarifying comments located throughout the code. 
+
+## Milestone 5 Functions/Class:
+
+ public toJSONObject(Reader, Consumer<JSONObject>, Consumer<Exception>)
+
+* Takes in a reader and two consumers (functionals that take in a single type): 
+* One functional to execute on the JSONObject that is returned by toJSONObject(reader).
+* One to execute on any exception that may be thrown while executing the first.
+* And executes them in a new Thread via the ConcurrentReadJSONObject class.
+
+
+private class ConcurrentReadJSONObject implements Runnable
+
+* Class implementing runnable that takes in a reader and two consumers.
+* Reads a JSONObject via toJSONObject(Reader) and performs the first consumer's functionality on it.
+* If an exception is thrown during the processing of the JSONObject, the second consumer is performed with the thrown exception.
+
+
+---
+
 # SWE 262P Project Milestone 4
 
 Changes made within JSONObject.java starting on line 99 and ending on line 186.
